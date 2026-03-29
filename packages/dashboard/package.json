@@ -1,0 +1,10 @@
+{
+  "name": "@trade/dashboard",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/server.js",
+  "bin": { "trade-dashboard": "dist/server.js" },
+  "scripts": { "build": "tsc", "dev": "tsc --watch", "start": "node dist/server.js" },
+  "dependencies": { "@trade/core": "*" },
+  "devDependencies": { "typescript": "^5.7.0" }
+}
