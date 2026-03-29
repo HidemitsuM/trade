@@ -1,0 +1,16 @@
+orchestrator:
+  max_concurrent_agents: 8
+  signal_timeout_ms: 5000
+  heartbeat_interval_ms: 10000
+
+risk:
+  max_total_exposure_usd: 5000
+  max_single_trade_usd: 500
+  max_drawdown_pct: 10
+  circuit_breaker_loss_usd: 200
+  daily_loss_limit_usd: 300
+
+simulation:
+  enabled: true
+  slippage_pct: 0.5
+  fee_pct: 0.3
