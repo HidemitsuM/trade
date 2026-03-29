@@ -1,16 +1,16 @@
-import Redis from 'ioredis';
+import IORedis from 'ioredis';
 import type { Signal, SignalType } from './types.js';
 import { logger } from './logger.js';
 
 export type SignalHandler = (signal: Signal) => void;
 
 export class SignalBus {
-  private publisher: Redis;
-  private subscribers: Map<string, Redis> = new Map();
+  private publisher: IORedis;
+  private subscribers: Map<string, IORedis> = new Map();
   private handlers: Map<string, Set<SignalHandler>> = new Map();
 
   constructor(redisUrl: string) {
-    this.publisher = new Redis(redisUrl);
+    this.publisher = new IORedis(redisUrl);
     logger.info('SignalBus initialized', { redisUrl });
   }
 
@@ -28,7 +28,7 @@ export class SignalBus {
     this.handlers.get(signalType)!.add(handler);
 
     if (!this.subscribers.has(signalType)) {
-      const sub = new Redis(
+      const sub = new IORedis(
         this.publisher.options.host ?? 'localhost',
         this.publisher.options.port ?? 6379
       );
