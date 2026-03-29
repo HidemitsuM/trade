@@ -1,0 +1,10 @@
+{
+  "name": "@trade/agent-liquidity-hunter",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": { "trade-liquidity-hunter": "dist/index.js" },
+  "scripts": { "build": "tsc", "dev": "tsc --watch", "start": "node dist/index.js" },
+  "dependencies": { "@trade/core": "*" },
+  "devDependencies": { "typescript": "^5.7.0" }
+}
