@@ -12,5 +12,29 @@ services:
       timeout: 3s
       retries: 5
 
+  orchestrator:
+    build: .
+    command: node packages/orchestrator/dist/index.js
+    environment:
+      - SIMULATION=true
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+
+  dashboard:
+    build: .
+    command: node packages/dashboard/dist/index.js
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_PATH=/app/data/trade.db
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - orchestrator
+
 volumes:
   redis-data:
