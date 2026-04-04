@@ -4,3 +4,4 @@ export { Database } from './db.js';
 export { SignalBus } from './signal-bus.js';
 export { logger } from './logger.js';
 export { BaseAgent } from './base-agent.js';
+export { SimulationEngine } from './simulation.js';
