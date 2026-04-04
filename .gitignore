@@ -1,7 +1,8 @@
 node_modules/
 dist/
-data/*.db
+data/
 .env
 *.log
 .DS_Store
 coverage/
+*.tsbuildinfo
