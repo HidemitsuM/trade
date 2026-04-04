@@ -1,0 +1,61 @@
+{
+  "mcpServers": {
+    "1inch": {
+      "command": "node",
+      "args": ["packages/mcp-servers/1inch/dist/index.js"],
+      "env": { "ONEINCH_API_KEY": "" }
+    },
+    "bnb-chain": {
+      "command": "node",
+      "args": ["packages/mcp-servers/bnb-chain/dist/index.js"],
+      "env": { "BSC_RPC_URL": "" }
+    },
+    "browser": {
+      "command": "node",
+      "args": ["packages/mcp-servers/browser/dist/index.js"]
+    },
+    "coingecko": {
+      "command": "node",
+      "args": ["packages/mcp-servers/coingecko/dist/index.js"],
+      "env": { "COINGECKO_API_KEY": "" }
+    },
+    "coinmarketcap": {
+      "command": "node",
+      "args": ["packages/mcp-servers/coinmarketcap/dist/index.js"],
+      "env": { "CMC_API_KEY": "" }
+    },
+    "dune": {
+      "command": "node",
+      "args": ["packages/mcp-servers/dune/dist/index.js"],
+      "env": { "DUNE_API_KEY": "" }
+    },
+    "git-mcp": {
+      "command": "node",
+      "args": ["packages/mcp-servers/git-mcp/dist/index.js"],
+      "env": { "GITHUB_TOKEN": "" }
+    },
+    "helius": {
+      "command": "node",
+      "args": ["packages/mcp-servers/helius/dist/index.js"],
+      "env": { "HELIUS_RPC_URL": "" }
+    },
+    "jupiter": {
+      "command": "node",
+      "args": ["packages/mcp-servers/jupiter/dist/index.js"]
+    },
+    "phantom": {
+      "command": "node",
+      "args": ["packages/mcp-servers/phantom/dist/index.js"],
+      "env": { "PHANTOM_PRIVATE_KEY": "" }
+    },
+    "polymarket": {
+      "command": "node",
+      "args": ["packages/mcp-servers/polymarket/dist/index.js"],
+      "env": { "POLYMARKET_API_KEY": "" }
+    },
+    "risk-manager": {
+      "command": "node",
+      "args": ["packages/mcp-servers/risk-manager/dist/index.js"]
+    }
+  }
+}

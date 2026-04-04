@@ -14,3 +14,34 @@ simulation:
   enabled: true
   slippage_pct: 0.5
   fee_pct: 0.3
+
+agents:
+  arb-scanner:
+    interval_ms: 5000
+    min_profit_usd: 5
+    chains: [solana, bsc]
+  pump-sniper:
+    interval_ms: 3000
+    max_position_usd: 200
+    max_open_positions: 3
+  spread-farmer:
+    interval_ms: 5000
+    min_spread_pct: 2
+    max_positions: 10
+  whale-tracker:
+    interval_ms: 10000
+    min_whale_usd: 10000
+  copy-trader:
+    interval_ms: 2000
+    max_copy_usd: 300
+    copy_delay_ms: 2000
+  news-edge:
+    interval_ms: 30000
+    sentiment_threshold: 0.7
+  liquidity-hunter:
+    interval_ms: 10000
+    min_liquidity_change_pct: 5
+  portfolio-guard:
+    interval_ms: 15000
+    stop_loss_pct: 8
+    rebalance_threshold_pct: 5
