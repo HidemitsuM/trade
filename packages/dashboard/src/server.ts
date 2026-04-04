@@ -66,34 +66,45 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export function startDashboard(db: Database): void {
+export function startDashboard(db: Database | null): void {
   const server = createServer((req, res) => {
     if (req.url === '/api/status') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      if (!db) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Database not initialized' }));
+        return;
+      }
 
-      const trades = db.getTradesByAgent('arb-scanner')
-        .concat(db.getTradesByAgent('pump-sniper'))
-        .concat(db.getTradesByAgent('spread-farmer'))
-        .concat(db.getTradesByAgent('copy-trader'))
-        .concat(db.getTradesByAgent('liquidity-hunter'))
-        .concat(db.getTradesByAgent('news-edge'))
-        .concat(db.getTradesByAgent('whale-tracker'))
-        .concat(db.getTradesByAgent('portfolio-guard'))
-        .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-        .slice(0, 50);
+      try {
+        const trades = db.getTradesByAgent('arb-scanner')
+          .concat(db.getTradesByAgent('pump-sniper'))
+          .concat(db.getTradesByAgent('spread-farmer'))
+          .concat(db.getTradesByAgent('copy-trader'))
+          .concat(db.getTradesByAgent('liquidity-hunter'))
+          .concat(db.getTradesByAgent('news-edge'))
+          .concat(db.getTradesByAgent('whale-tracker'))
+          .concat(db.getTradesByAgent('portfolio-guard'))
+          .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+          .slice(0, 50);
 
-      const wonTrades = trades.filter(t => t.pnl !== null && t.pnl > 0);
-      const closedTrades = trades.filter(t => t.pnl !== null);
-      const totalPnl = closedTrades.reduce((s, t) => s + t.pnl, 0);
+        const wonTrades = trades.filter(t => t.pnl !== null && t.pnl > 0);
+        const closedTrades = trades.filter(t => t.pnl !== null);
+        const totalPnl = closedTrades.reduce((s, t) => s + t.pnl, 0);
 
-      res.end(JSON.stringify({
-        total_pnl: totalPnl,
-        win_rate: closedTrades.length > 0 ? (wonTrades.length / closedTrades.length) * 100 : 0,
-        total_trades: trades.length,
-        active_agents: 8,
-        total_agents: 8,
-        trades: trades,
-      }));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          total_pnl: totalPnl,
+          win_rate: closedTrades.length > 0 ? (wonTrades.length / closedTrades.length) * 100 : 0,
+          total_trades: trades.length,
+          active_agents: 8,
+          total_agents: 8,
+          trades: trades,
+        }));
+      } catch (err) {
+        console.error('DB query failed:', err);
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Database not initialized' }));
+      }
     } else {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(HTML);
