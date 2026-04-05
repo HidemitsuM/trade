@@ -3,6 +3,7 @@ import { BaseAgent } from '../src/base-agent.js';
 import type { Signal, SignalType } from '../src/types.js';
 import type { SignalBus } from '../src/signal-bus.js';
 import type { Database } from '../src/db.js';
+import { SimulationEngine } from '../src/simulation.js';
 
 class TestAgent extends BaseAgent {
   tickCount = 0;
@@ -87,14 +88,14 @@ describe('BaseAgent', () => {
     it('setInfrastructure sets signalBus and db', () => {
       const signalBus = createMockSignalBus();
       const db = createMockDb();
-      agent.setInfrastructure(signalBus, db);
+      agent.setInfrastructure({ signalBus, db, simulation: new SimulationEngine() });
       // Verify via publishSignal behavior below
     });
 
     it('publishSignal calls signalBus.publish() when signalBus is set', () => {
       const signalBus = createMockSignalBus();
       const db = createMockDb();
-      agent.setInfrastructure(signalBus, db);
+      agent.setInfrastructure({ signalBus, db, simulation: new SimulationEngine() });
 
       const signal = agent.publishSignal('price_gap', { pair: 'SOL/USDT' }, 0.9);
       expect(signalBus.publish).toHaveBeenCalledWith(signal);
@@ -103,7 +104,7 @@ describe('BaseAgent', () => {
     it('publishSignal calls db.insertSignal() when db is set', () => {
       const signalBus = createMockSignalBus();
       const db = createMockDb();
-      agent.setInfrastructure(signalBus, db);
+      agent.setInfrastructure({ signalBus, db, simulation: new SimulationEngine() });
 
       const signal = agent.publishSignal('whale_move', { address: '0xabc' }, 0.7);
       expect(db.insertSignal).toHaveBeenCalledWith(signal);
@@ -125,7 +126,7 @@ describe('BaseAgent', () => {
       }
 
       const subAgent = new SubscribingAgent();
-      subAgent.setInfrastructure(signalBus, createMockDb());
+      subAgent.setInfrastructure({ signalBus, db: createMockDb(), simulation: new SimulationEngine() });
       await subAgent.start();
       subAgent.stop();
 
