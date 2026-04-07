@@ -5,7 +5,7 @@ export interface AgentLike {
   start(): Promise<void>;
   stop(): void;
   getStatus(): AgentStatus;
-  name: string;
+  readonly name: string;
 }
 
 export class AgentManager {

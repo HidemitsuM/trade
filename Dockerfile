@@ -38,12 +38,14 @@ COPY packages/mcp-servers/polymarket/package.json packages/mcp-servers/polymarke
 COPY packages/mcp-servers/risk-manager/package.json packages/mcp-servers/risk-manager/
 
 # Install all workspace dependencies
-RUN npm ci --workspaces --include-workspace-root
+RUN npm install
 
 # Copy source code and build
 COPY tsconfig.json vitest.config.ts ./
+COPY config/ config/
 COPY packages/ packages/
-RUN npm run build
+COPY scripts/ scripts/
+RUN node scripts/build.mjs
 
 # Prune devDependencies for the runner image
 RUN npm prune --omit=dev

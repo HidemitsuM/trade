@@ -89,7 +89,7 @@ export function startDashboard(db: Database | null): void {
 
         const wonTrades = trades.filter(t => t.pnl !== null && t.pnl > 0);
         const closedTrades = trades.filter(t => t.pnl !== null);
-        const totalPnl = closedTrades.reduce((s, t) => s + t.pnl, 0);
+        const totalPnl = closedTrades.reduce((s, t) => s + t.pnl!, 0);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({

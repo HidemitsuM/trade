@@ -6,7 +6,7 @@ import { logger } from './logger.js';
 import { randomUUID } from 'node:crypto';
 
 export abstract class BaseAgent {
-  protected name: string;
+  public readonly name: string;
   protected config: { interval_ms: number };
   protected signalBus: SignalBus | null = null;
   protected db: Database | null = null;

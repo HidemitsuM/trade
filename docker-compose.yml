@@ -17,6 +17,8 @@ services:
     command: node packages/orchestrator/dist/index.js
     environment:
       - SIMULATION=true
+      - REDIS_URL=redis://redis:6379
+      - DB_PATH=/app/data/trade.db
     depends_on:
       redis:
         condition: service_healthy
