@@ -82,6 +82,17 @@ logger.info('Orchestrator initialized', {
   db: 'initialized',
 });
 
+// Periodic health status logging every 30 seconds
+setInterval(() => {
+  const statuses = manager.getAgentStatuses();
+  const errored = Object.entries(statuses).filter(([, s]) => s === 'error');
+  if (errored.length > 0) {
+    logger.warn('Health check: agents in error state', { errored: errored.map(([n]) => n) });
+  } else {
+    logger.debug('Health check: all agents healthy', { statuses });
+  }
+}, 30_000);
+
 manager.startAll().catch((err) => {
   logger.error('Orchestrator failed to start', { error: String(err) });
   process.exit(1);

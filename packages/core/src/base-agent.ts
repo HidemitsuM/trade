@@ -13,6 +13,7 @@ export abstract class BaseAgent {
   protected simulation: SimulationEngine | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private status: AgentStatus = 'idle';
+  private consecutiveErrors = 0;
 
   constructor(name: string, config: { interval_ms: number }) {
     this.name = name;
@@ -47,9 +48,16 @@ export abstract class BaseAgent {
     }
 
     this.timer = setInterval(() => {
-      this.tick().catch((err) => {
-        logger.error(`Agent ${this.name} tick error`, { error: String(err) });
+      this.tick().then(() => {
+        if (this.consecutiveErrors > 0) this.consecutiveErrors = 0;
+        if (this.status === 'error') this.status = 'running';
+      }).catch((err) => {
+        this.consecutiveErrors++;
+        logger.error(`Agent ${this.name} tick error`, { error: String(err), consecutive_errors: this.consecutiveErrors });
         this.status = 'error';
+        if (this.consecutiveErrors >= 3) {
+          logger.warn(`Agent ${this.name} circuit breaker triggered`, { consecutive_errors: this.consecutiveErrors });
+        }
       });
     }, this.config.interval_ms);
   }

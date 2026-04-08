@@ -9,6 +9,7 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
 
 class Logger {
   private minLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info';
+  private jsonFormat: boolean = (process.env.LOG_FORMAT ?? '').toLowerCase() === 'json';
 
   setLevel(level: LogLevel): void {
     this.minLevel = level;
@@ -19,6 +20,14 @@ class Logger {
   }
 
   private format(level: LogLevel, message: string, meta?: Record<string, unknown>): string {
+    if (this.jsonFormat) {
+      return JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level,
+        message,
+        ...(meta && { meta }),
+      });
+    }
     const ts = new Date().toISOString();
     const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
     return `[${ts}] ${level.toUpperCase()} ${message}${metaStr}`;
