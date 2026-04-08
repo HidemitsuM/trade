@@ -1,9 +1,18 @@
 import type { Signal, SignalType, AgentStatus } from './types.js';
 import type { SignalBus } from './signal-bus.js';
 import type { Database } from './db.js';
+import type { MCPConnectionPool } from './mcp-pool.js';
 import { SimulationEngine } from './simulation.js';
 import { logger } from './logger.js';
 import { randomUUID } from 'node:crypto';
+
+export interface AgentInfrastructure {
+  db: Database;
+  signalBus: SignalBus;
+  simulation: SimulationEngine;
+  mcpPool?: MCPConnectionPool;
+  isSimulation?: boolean;
+}
 
 export abstract class BaseAgent {
   public readonly name: string;
@@ -11,6 +20,8 @@ export abstract class BaseAgent {
   protected signalBus: SignalBus | null = null;
   protected db: Database | null = null;
   protected simulation: SimulationEngine | null = null;
+  protected mcpPool: MCPConnectionPool | null = null;
+  protected isSimulation: boolean = true;
   private timer: ReturnType<typeof setInterval> | null = null;
   private status: AgentStatus = 'idle';
   private consecutiveErrors = 0;
@@ -20,10 +31,12 @@ export abstract class BaseAgent {
     this.config = config;
   }
 
-  setInfrastructure(infra: { db: Database; signalBus: SignalBus; simulation: SimulationEngine }): void {
+  setInfrastructure(infra: AgentInfrastructure): void {
     this.db = infra.db;
     this.signalBus = infra.signalBus;
     this.simulation = infra.simulation;
+    this.mcpPool = infra.mcpPool ?? null;
+    this.isSimulation = infra.isSimulation ?? true;
   }
 
   getSubscribedSignalTypes(): SignalType[] {

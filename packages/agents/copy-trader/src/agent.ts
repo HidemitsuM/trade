@@ -1,4 +1,4 @@
-import { BaseAgent } from '@trade/core';
+import { BaseAgent, logger } from '@trade/core';
 import type { Signal, SignalType } from '@trade/core';
 import { CopyTraderStrategy, type CopyTraderConfig } from './strategy.js';
 import { randomUUID } from 'node:crypto';
@@ -16,6 +16,11 @@ export class CopyTraderAgent extends BaseAgent {
 
   protected async tick(): Promise<void> {
     if (!this.simulation) return;
+    // Copy trading depends on real-time whale data — always simulation for now
+    if (!this.isSimulation && this.mcpPool) {
+      logger.debug(`Agent ${this.name} using simulation (depends on whale-tracker real-time data)`);
+    }
+
     const signal = this.simulation.generateCopySignal();
     const decision = this.strategy.evaluate(signal);
     if (decision.should_copy) {
@@ -26,7 +31,6 @@ export class CopyTraderAgent extends BaseAgent {
         whale_wallet: signal.whale_wallet,
       }, 0.7);
 
-      // Record simulated copy trade
       if (this.db) {
         const price = signal.token === 'BTC' ? 50000
           : signal.token === 'ETH' ? 3000
@@ -44,7 +48,7 @@ export class CopyTraderAgent extends BaseAgent {
           fee: decision.copy_amount_usd * 0.001,
           chain: 'ethereum',
           tx_hash: null,
-          simulated: true,
+          simulated: this.isSimulation,
           timestamp: new Date().toISOString(),
         });
       }
