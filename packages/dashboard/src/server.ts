@@ -67,8 +67,21 @@ const HTML = `<!DOCTYPE html>
 </html>`;
 
 export function startDashboard(db: Database | null): void {
+  const startTime = Date.now();
+
   const server = createServer((req, res) => {
     const url = req.url ?? '/';
+
+    if (url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        db: db !== null,
+        uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
+      }));
+      return;
+    }
 
     if (url.startsWith('/api/')) {
       if (!db) {
