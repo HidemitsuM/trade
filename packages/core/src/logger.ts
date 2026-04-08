@@ -8,7 +8,7 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
 };
 
 class Logger {
-  private minLevel: LogLevel = 'info';
+  private minLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info';
 
   setLevel(level: LogLevel): void {
     this.minLevel = level;

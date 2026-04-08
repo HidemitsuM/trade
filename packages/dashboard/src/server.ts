@@ -68,7 +68,9 @@ const HTML = `<!DOCTYPE html>
 
 export function startDashboard(db: Database | null): void {
   const server = createServer((req, res) => {
-    if (req.url === '/api/status') {
+    const url = req.url ?? '/';
+
+    if (url.startsWith('/api/')) {
       if (!db) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Database not initialized' }));
@@ -92,18 +94,41 @@ export function startDashboard(db: Database | null): void {
         const totalPnl = closedTrades.reduce((s, t) => s + t.pnl!, 0);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          total_pnl: totalPnl,
-          win_rate: closedTrades.length > 0 ? (wonTrades.length / closedTrades.length) * 100 : 0,
-          total_trades: trades.length,
-          active_agents: 8,
-          total_agents: 8,
-          trades: trades,
-        }));
+
+        if (url === '/api/status') {
+          res.end(JSON.stringify({
+            total_pnl: totalPnl,
+            win_rate: closedTrades.length > 0 ? (wonTrades.length / closedTrades.length) * 100 : 0,
+            total_trades: trades.length,
+            active_agents: 8,
+            total_agents: 8,
+            trades: trades,
+          }));
+        } else if (url === '/api/pnl') {
+          res.end(JSON.stringify({
+            total_pnl: totalPnl,
+            win_rate: closedTrades.length > 0 ? (wonTrades.length / closedTrades.length) * 100 : 0,
+            total_trades: trades.length,
+            winning_trades: wonTrades.length,
+            losing_trades: closedTrades.length - wonTrades.length,
+          }));
+        } else if (url === '/api/agents') {
+          const agentNames = ['arb-scanner', 'pump-sniper', 'spread-farmer', 'copy-trader', 'liquidity-hunter', 'news-edge', 'whale-tracker', 'portfolio-guard'];
+          const agents = agentNames.map(name => ({
+            name,
+            status: 'running',
+            trade_count: db.getTradesByAgent(name).length,
+            pnl: db.getAgentPnl(name),
+          }));
+          res.end(JSON.stringify({ agents, total_agents: agents.length, active_agents: agents.length }));
+        } else {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Not found' }));
+        }
       } catch (err) {
         console.error('DB query failed:', err);
         res.writeHead(503, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Database not initialized' }));
+        res.end(JSON.stringify({ error: 'Database query failed' }));
       }
     } else {
       res.writeHead(200, { 'Content-Type': 'text/html' });
