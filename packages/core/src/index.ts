@@ -9,3 +9,5 @@ export { SimulationEngine } from './simulation.js';
 export { MCPClientWrapper } from './mcp-client.js';
 export type { MCPServerConfig } from './mcp-client.js';
 export { MCPConnectionPool } from './mcp-pool.js';
+export { WalletManager } from './wallet.js';
+export type { WalletConfig, WalletBalance, TradeRequest, TradeResult } from './wallet.js';

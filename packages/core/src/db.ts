@@ -156,6 +156,22 @@ export class Database {
     return this.db.prepare('SELECT metric, value, threshold, breached, timestamp FROM risk_state').all() as RiskState[];
   }
 
+  upsertWalletState(state: { id: string; chain: string; address: string; balance_json: string; updated_at: string }): void {
+    this.db.prepare(`
+      INSERT INTO wallet_state (id, chain, address, balance_json, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        balance_json = excluded.balance_json,
+        updated_at = excluded.updated_at
+    `).run(state.id, state.chain, state.address, state.balance_json, state.updated_at);
+  }
+
+  getWalletState(chain: string): { chain: string; address: string; balances: Record<string, number>; updated_at: string } | undefined {
+    const row = this.db.prepare('SELECT * FROM wallet_state WHERE chain = ? ORDER BY updated_at DESC LIMIT 1').get(chain) as ({ chain: string; address: string; balance_json: string; updated_at: string } | undefined);
+    if (!row) return undefined;
+    return { chain: row.chain, address: row.address, balances: JSON.parse(row.balance_json), updated_at: row.updated_at };
+  }
+
   close(): void {
     this.db.close();
   }
