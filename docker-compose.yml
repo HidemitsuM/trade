@@ -13,8 +13,9 @@ services:
       retries: 5
 
   orchestrator:
-    build: .
-    command: node packages/orchestrator/dist/index.js
+    build:
+      context: .
+      target: orchestrator
     environment:
       - SIMULATION=true
       - REDIS_URL=redis://redis:6379
@@ -27,8 +28,9 @@ services:
       - ./config:/app/config
 
   dashboard:
-    build: .
-    command: node packages/dashboard/dist/index.js
+    build:
+      context: .
+      target: dashboard
     ports:
       - "3000:3000"
     environment:
