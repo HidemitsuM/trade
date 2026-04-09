@@ -40,5 +40,23 @@ services:
     depends_on:
       - orchestrator
 
+  db-backup:
+    image: alpine:3.19
+    depends_on:
+      - orchestrator
+    environment:
+      - DB_BACKUP_RETENTION_DAYS=30
+    volumes:
+      - ./data:/data
+      - ./scripts/backup-db.sh:/backup-db.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache sqlite
+        while true; do
+          sh /backup-db.sh /data/trade.db /data/backups
+          sleep 21600
+        done
+
 volumes:
   redis-data:
