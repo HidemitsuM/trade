@@ -82,18 +82,28 @@ if (!res || typeof (res as any).expectedField !== 'number' || (res as any).expec
 
 **Problem**: Always uses simulation because WebSocket/subscription MCP tools don't exist.
 
-**Fix**: Use Helius MCP `get_signatures_for_address` to poll recent transactions for known whale wallets. Filter transactions exceeding `WHALE_MIN_USD` threshold.
+**Fix**: Add `get_signatures_for_address` tool to Helius MCP server, then use it to poll recent transactions for known whale wallets.
 
-**Design**:
-- `tick()`: Poll monitored wallet addresses for recent transactions
-- Parse transaction amounts using Helius `get_transaction_details` or similar
-- Emit `whale_move` signals for transactions > WHALE_MIN_USD
+**Helius MCP changes** (add new tool):
+- `get_signatures_for_address`: wraps Solana RPC `getSignaturesForAddress` method
+- Returns array of `{ signature, slot, blockTime, err }` for a given address
+- Accepts `limit` parameter (default 10)
+
+**Agent design**:
+- `tick()`: Poll monitored wallet addresses for recent signatures
+- For each new signature, call existing `get_transaction` tool for details
+- Parse SOL transfer amounts from transaction logs
+- Emit `whale_move` signals for transfers > WHALE_MIN_USD
+- Track last seen signature per wallet to avoid re-processing
 - Monitored wallets: configurable via env var `WHALE_WATCH_ADDRESSES` (comma-separated)
 
 **New env vars**:
 - `WHALE_WATCH_ADDRESSES`: comma-separated list of wallet addresses to monitor (optional, defaults to empty = simulation fallback)
 
-**Files**: `packages/agents/whale-tracker/src/agent.ts`
+**Files**:
+- `packages/mcp-servers/helius/src/tools.ts` (add getSignaturesForAddress method)
+- `packages/mcp-servers/helius/src/index.ts` (register new tool)
+- `packages/agents/whale-tracker/src/agent.ts`
 
 ### copy-trader: Signal-Driven Trading
 
