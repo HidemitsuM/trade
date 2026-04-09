@@ -4,7 +4,7 @@ import { ArbStrategy, type ArbConfig } from './strategy.js';
 import { randomUUID } from 'node:crypto';
 
 const TOKEN_MAP: Record<string, string> = {
-  solana: 'SOL', ethereum: 'ETH', bitcoin: 'BTC', binancecoin: 'BNB',
+  solana: 'SOL',
 };
 
 export class ArbScannerAgent extends BaseAgent {
@@ -16,17 +16,32 @@ export class ArbScannerAgent extends BaseAgent {
 
   private async fetchRealPrices(): Promise<{ pair: string; buyPrice: number; sellPrice: number; quantity: number }[]> {
     const results: { pair: string; buyPrice: number; sellPrice: number; quantity: number }[] = [];
+    const SOL_MINT = 'So11111111111111111111111111111111111111112';
+    const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
     for (const [coinId, symbol] of Object.entries(TOKEN_MAP)) {
-      const res = await this.mcpPool!.callTool('coingecko', 'get_price', { coin_id: coinId }) as { coin_id: string; price: number };
-      const basePrice = res.price;
-      // Estimate arb spread between CEX (CoinGecko) and DEX
-      const spread = basePrice * (Math.random() * 0.03 - 0.005);
-      results.push({
-        pair: `${symbol}/USDT`,
-        buyPrice: basePrice,
-        sellPrice: basePrice + spread,
-        quantity: Math.round(Math.random() * 50 + 1),
-      });
+      // Fetch CEX price from CoinGecko
+      const cexRes = await this.mcpPool!.callTool('coingecko', 'get_price', { coin_id: coinId });
+      if (!cexRes || typeof (cexRes as any).price !== 'number' || (cexRes as any).price <= 0) {
+        throw new Error(`Invalid CoinGecko response for ${coinId}: ${JSON.stringify(cexRes)}`);
+      }
+      const cexPrice = (cexRes as { price: number }).price;
+
+      if (symbol === 'SOL') {
+        // Fetch DEX price from Jupiter for SOL/USDC
+        const dexRes = await this.mcpPool!.callTool('jupiter', 'get_quote', {
+          input_mint: SOL_MINT, output_mint: USDC_MINT, amount: 1_000_000_000,
+        });
+        if (!dexRes || typeof (dexRes as any).outAmount !== 'string') {
+          throw new Error(`Invalid Jupiter response for SOL: ${JSON.stringify(dexRes)}`);
+        }
+        const dexPrice = Number((dexRes as { outAmount: string }).outAmount) / 1e6;
+        const buyPrice = Math.min(cexPrice, dexPrice);
+        const sellPrice = Math.max(cexPrice, dexPrice);
+        if (sellPrice > buyPrice) {
+          results.push({ pair: 'SOL/USDT', buyPrice, sellPrice, quantity: 1 });
+        }
+      }
     }
     return results;
   }
