@@ -18,9 +18,13 @@ export class SpreadFarmerAgent extends BaseAgent {
     // Use Jupiter quote to estimate spread on SOL/USDT
     const SOL_MINT = 'So11111111111111111111111111111111111111112';
     const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-    const quote = await this.mcpPool!.callTool('jupiter', 'get_quote', {
-      inputMint: SOL_MINT, outputMint: USDC_MINT, amount: 1000000000,
-    }) as { inAmount: string; outAmount: string; priceImpactPct: number };
+    const quoteRes = await this.mcpPool!.callTool('jupiter', 'get_quote', {
+      input_mint: SOL_MINT, output_mint: USDC_MINT, amount: 1000000000,
+    });
+    if (!quoteRes || typeof (quoteRes as any).outAmount !== 'string' || typeof (quoteRes as any).priceImpactPct !== 'number') {
+      throw new Error(`Invalid Jupiter quote response: ${JSON.stringify(quoteRes)}`);
+    }
+    const quote = quoteRes as { inAmount: string; outAmount: string; priceImpactPct: number };
 
     const mid = Number(quote.outAmount) / 1e6; // USDC has 6 decimals
     const halfSpread = mid * quote.priceImpactPct / 200;

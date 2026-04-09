@@ -15,7 +15,11 @@ export class LiquidityHunterAgent extends BaseAgent {
   private async fetchRealLiquidity(): Promise<{ token: string; previous_liquidity: number; current_liquidity: number }> {
     const token = TOKENS[Math.floor(Math.random() * TOKENS.length)];
     // Use CoinGecko token volume as liquidity proxy
-    const res = await this.mcpPool!.callTool('coingecko', 'get_token_info', { coin_id: token.toLowerCase() }) as { price: number; volume_24h: number };
+    const resRaw = await this.mcpPool!.callTool('coingecko', 'get_token_info', { coin_id: token.toLowerCase() });
+    if (!resRaw || typeof (resRaw as any).volume_24h !== 'number' || (resRaw as any).volume_24h < 0) {
+      throw new Error(`Invalid CoinGecko token info for ${token}: ${JSON.stringify(resRaw)}`);
+    }
+    const res = resRaw as { price: number; volume_24h: number };
     const previous = this.previousQuotes.get(token) ?? res.volume_24h;
     this.previousQuotes.set(token, res.volume_24h);
     return { token, previous_liquidity: previous, current_liquidity: res.volume_24h };

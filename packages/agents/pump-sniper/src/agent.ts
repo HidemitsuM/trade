@@ -17,12 +17,16 @@ export class PumpSniperAgent extends BaseAgent {
   }
 
   private async fetchTrendingTokens(): Promise<{ token: string; liquidity_usd: number; social_score: number; red_flags: string[] }[]> {
-    const trending = await this.mcpPool!.callTool('coingecko', 'get_trending', {}) as Array<{ id: string; name: string; symbol: string; market_cap_rank: number }>;
+    const trendingRes = await this.mcpPool!.callTool('coingecko', 'get_trending', {});
+    if (!trendingRes || !Array.isArray(trendingRes)) {
+      throw new Error(`Invalid CoinGecko trending response: ${JSON.stringify(trendingRes)}`);
+    }
+    const trending = trendingRes as Array<{ id: string; name: string; symbol: string; market_cap_rank: number }>;
     return trending.map((coin, i) => ({
       token: coin.symbol,
-      liquidity_usd: Math.max(1000, (101 - coin.market_cap_rank) * 5000),
+      liquidity_usd: Math.max(1000, (101 - (coin.market_cap_rank || 999)) * 5000),
       social_score: Math.min(0.95, 0.3 + (trending.length - i) / trending.length * 0.6),
-      red_flags: coin.market_cap_rank > 500 ? ['no_audit'] : [],
+      red_flags: (coin.market_cap_rank || 999) > 500 ? ['no_audit'] : [],
     }));
   }
 

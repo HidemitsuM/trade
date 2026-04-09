@@ -27,7 +27,11 @@ export class PortfolioGuardAgent extends BaseAgent {
     if (!this.isSimulation && this.wallet && this.mcpPool) {
       try {
         const balance = await this.wallet.getBalance();
-        const solPrice = await this.mcpPool.callTool('coingecko', 'get_price', { coin_id: 'solana' }) as { price: number };
+        const solPriceRes = await this.mcpPool.callTool('coingecko', 'get_price', { coin_id: 'solana' });
+        if (!solPriceRes || typeof (solPriceRes as any).price !== 'number' || (solPriceRes as any).price <= 0) {
+          throw new Error(`Invalid CoinGecko SOL price: ${JSON.stringify(solPriceRes)}`);
+        }
+        const solPrice = solPriceRes as { price: number };
         const portfolio = {
           positions: [{
             token: 'SOL',
@@ -84,8 +88,16 @@ export class PortfolioGuardAgent extends BaseAgent {
       try {
         const walletAddress = process.env.WALLET_ADDRESS || '';
         if (walletAddress) {
-          const balResult = await this.mcpPool.callTool('helius', 'get_account_balance', { address: walletAddress }) as { value: number };
-          const solPrice = await this.mcpPool.callTool('coingecko', 'get_price', { coin_id: 'solana' }) as { price: number };
+          const balRes = await this.mcpPool.callTool('helius', 'get_account_balance', { address: walletAddress });
+          if (!balRes || typeof (balRes as any).value !== 'number') {
+            throw new Error(`Invalid Helius balance response: ${JSON.stringify(balRes)}`);
+          }
+          const balResult = balRes as { value: number };
+          const solPriceRes = await this.mcpPool.callTool('coingecko', 'get_price', { coin_id: 'solana' });
+          if (!solPriceRes || typeof (solPriceRes as any).price !== 'number' || (solPriceRes as any).price <= 0) {
+            throw new Error(`Invalid CoinGecko SOL price: ${JSON.stringify(solPriceRes)}`);
+          }
+          const solPrice = solPriceRes as { price: number };
           const portfolio = {
             positions: [{ token: 'SOL', entry_price: solPrice.price * 0.9, current_price: solPrice.price, allocation_pct: 100 }],
             total_value_usd: balResult.value,
