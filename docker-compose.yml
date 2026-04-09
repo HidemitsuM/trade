@@ -40,5 +40,25 @@ services:
     depends_on:
       - orchestrator
 
+  db-backup:
+    image: alpine:3.19
+    restart: unless-stopped
+    depends_on:
+      - orchestrator
+    environment:
+      - DB_BACKUP_RETENTION_DAYS=30
+    volumes:
+      - ./data:/data
+      - ./scripts/backup-db.sh:/backup-db.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache sqlite
+        sleep 60
+        while true; do
+          sh /backup-db.sh /data/trade.db /data/backups || echo "[WARNING] Backup failed, will retry in 6h"
+          sleep 21600
+        done
+
 volumes:
   redis-data:
