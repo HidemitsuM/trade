@@ -14,11 +14,27 @@ export class NewsEdgeAgent extends BaseAgent {
   }
 
   private async fetchRealSentiment(): Promise<{ token: string; sentiment_score: number; fear_greed: number; source: string }> {
-    const fg = await this.mcpPool!.callTool('coinmarketcap', 'get_fear_greed', {}) as { value: number; classification: string };
+    const fgRaw = await this.mcpPool!.callTool('coinmarketcap', 'get_fear_greed', {});
+    if (!fgRaw || typeof (fgRaw as any).value !== 'number' || (fgRaw as any).value < 0 || (fgRaw as any).value > 100) {
+      throw new Error(`Invalid Fear&Greed response: ${JSON.stringify(fgRaw)}`);
+    }
+    const fg = fgRaw as { value: number; classification: string };
     this.lastFearGreed = fg.value;
     const sentimentScore = fg.value / 100;
     const token = TOKENS[Math.floor(Math.random() * TOKENS.length)];
     return { token, sentiment_score: sentimentScore, fear_greed: fg.value, source: 'coinmarketcap' };
+  }
+
+  private async getTokenPrice(token: string): Promise<number> {
+    const coinId = token.toLowerCase() === 'sol' ? 'solana'
+      : token.toLowerCase() === 'btc' ? 'bitcoin'
+      : token.toLowerCase() === 'eth' ? 'ethereum'
+      : token.toLowerCase();
+    const res = await this.mcpPool!.callTool('coingecko', 'get_price', { coin_id: coinId });
+    if (!res || typeof (res as any).price !== 'number' || (res as any).price <= 0) {
+      throw new Error(`Invalid CoinGecko price for ${token}: ${JSON.stringify(res)}`);
+    }
+    return (res as { price: number }).price;
   }
 
   protected async tick(): Promise<void> {
@@ -46,7 +62,17 @@ export class NewsEdgeAgent extends BaseAgent {
       }, data.sentiment_score);
 
       if (this.db) {
-        const entryPrice = data.token === 'BTC' ? 50000 : data.token === 'ETH' ? 3000 : 150;
+        let entryPrice: number;
+        if (!this.isSimulation && this.mcpPool) {
+          try {
+            entryPrice = await this.getTokenPrice(data.token);
+          } catch {
+            logger.warn(`Agent ${this.name} price fetch failed, skipping trade record`);
+            return;
+          }
+        } else {
+          entryPrice = 100;
+        }
         this.db.insertTrade({
           id: randomUUID(),
           agent: this.name,
@@ -57,7 +83,7 @@ export class NewsEdgeAgent extends BaseAgent {
           quantity: 1,
           pnl: null,
           fee: entryPrice * 0.001,
-          chain: 'ethereum',
+          chain: 'solana',
           tx_hash: null,
           simulated: this.isSimulation,
           timestamp: new Date().toISOString(),
