@@ -7,6 +7,8 @@ export class PortfolioGuardStrategy {
   constructor(config: PortfolioGuardConfig) { this.config = config; }
 
   evaluate(portfolio: { positions: Position[]; total_value_usd: number; max_exposure_usd: number }): GuardAction {
+    const empty: GuardAction = { stop_loss_triggered: false, rebalance_needed: false, tokens_to_sell: [] };
+    if (portfolio.positions.length === 0) return empty;
     const action: GuardAction = { stop_loss_triggered: false, rebalance_needed: false, tokens_to_sell: [] };
     const max_allocation = 100 / portfolio.positions.length;
 
