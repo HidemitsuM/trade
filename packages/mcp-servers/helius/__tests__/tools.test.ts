@@ -70,4 +70,34 @@ describe('HeliusClient', () => {
       expect(balance.lamports).toBe(5000000000);
     });
   });
+
+  describe('getSignaturesForAddress', () => {
+    it('returns recent transaction signatures for an address', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          result: [
+            { signature: 'sig1', slot: 100, blockTime: 1700000000, err: null },
+            { signature: 'sig2', slot: 101, blockTime: 1700000010, err: null },
+          ],
+        }),
+      });
+
+      const sigs = await client.getSignaturesForAddress('wallet123', 10);
+      expect(sigs).toHaveLength(2);
+      expect(sigs[0].signature).toBe('sig1');
+      expect(sigs[1].slot).toBe(101);
+    });
+
+    it('sends limit parameter in RPC call', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ result: [] }),
+      });
+
+      await client.getSignaturesForAddress('wallet123', 5);
+      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(callBody.params[1].limit).toBe(5);
+    });
+  });
 });

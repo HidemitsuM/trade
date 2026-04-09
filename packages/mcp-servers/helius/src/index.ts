@@ -45,5 +45,18 @@ server.tool(
   }
 );
 
+server.tool(
+  'get_signatures_for_address',
+  'Get recent transaction signatures for a Solana address',
+  {
+    address: z.string().describe('Wallet address to query'),
+    limit: z.number().optional().default(10).describe('Maximum signatures to return'),
+  },
+  async ({ address, limit }) => {
+    const sigs = await client.getSignaturesForAddress(address, limit);
+    return { content: [{ type: 'text' as const, text: JSON.stringify(sigs, null, 2) }] };
+  }
+);
+
 const transport = new StdioServerTransport();
 server.connect(transport).catch(console.error);

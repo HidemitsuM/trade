@@ -15,6 +15,13 @@ export interface BalanceInfo {
   value: number;
 }
 
+export interface SignatureInfo {
+  signature: string;
+  slot: number;
+  blockTime: number | null;
+  err: unknown;
+}
+
 export class HeliusClient {
   private rpcUrl: string;
 
@@ -48,6 +55,14 @@ export class HeliusClient {
 
   async getAccountBalance(address: string): Promise<BalanceInfo> {
     const result = await this.rpcCall('getBalance', [address]) as BalanceInfo;
+    return result;
+  }
+
+  async getSignaturesForAddress(address: string, limit: number = 10): Promise<SignatureInfo[]> {
+    const result = await this.rpcCall('getSignaturesForAddress', [
+      address,
+      { limit },
+    ]) as SignatureInfo[];
     return result;
   }
 }
