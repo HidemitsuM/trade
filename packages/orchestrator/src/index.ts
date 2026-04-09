@@ -103,6 +103,10 @@ const whaleTracker = new WhaleTrackerAgent({
   min_whale_usd: Number(process.env.WHALE_MIN_USD) || 10000,
 });
 whaleTracker.setInfrastructure({ db, signalBus, simulation, mcpPool, isSimulation });
+const watchAddresses = (process.env.WHALE_WATCH_ADDRESSES || '').split(',').filter(Boolean);
+if (watchAddresses.length > 0) {
+  whaleTracker.setWatchAddresses(watchAddresses);
+}
 manager.register('whale-tracker', whaleTracker);
 
 const copyTrader = new CopyTraderAgent({
