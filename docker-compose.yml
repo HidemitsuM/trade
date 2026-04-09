@@ -42,6 +42,7 @@ services:
 
   db-backup:
     image: alpine:3.19
+    restart: unless-stopped
     depends_on:
       - orchestrator
     environment:
@@ -53,8 +54,9 @@ services:
     command:
       - |
         apk add --no-cache sqlite
+        sleep 60
         while true; do
-          sh /backup-db.sh /data/trade.db /data/backups
+          sh /backup-db.sh /data/trade.db /data/backups || echo "[WARNING] Backup failed, will retry in 6h"
           sleep 21600
         done
 

@@ -5,7 +5,7 @@
 # Can be run standalone or via cron:
 #   0 */6 * * * /app/scripts/backup-db.sh /app/data/trade.db /app/data/backups
 
-set -euo pipefail
+set -uo pipefail
 
 DB_PATH="${1:-./data/trade.db}"
 BACKUP_DIR="${2:-./data/backups}"
@@ -21,10 +21,14 @@ if [ ! -f "$DB_PATH" ]; then
   exit 1
 fi
 
-# Use SQLite .backup for consistent snapshot
-sqlite3 "$DB_PATH" ".backup '${BACKUP_FILE}'"
+# Clean any leftover uncompressed backups from previous failed runs
+find "$BACKUP_DIR" -name "trade_*.db" -not -name "trade_*.db.gz" -delete 2>/dev/null || true
 
-if [ $? -eq 0 ]; then
+# Checkpoint WAL before backup for operational cleanliness
+sqlite3 "$DB_PATH" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
+
+# Use SQLite .backup for consistent snapshot
+if sqlite3 "$DB_PATH" ".backup '${BACKUP_FILE}'"; then
   SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
   echo "[$(date -Iseconds)] Backup created: $BACKUP_FILE ($SIZE)"
 
@@ -33,9 +37,10 @@ if [ $? -eq 0 ]; then
   echo "[$(date -Iseconds)] Compressed: ${BACKUP_FILE}.gz"
 
   # Remove backups older than RETENTION_DAYS
-  find "$BACKUP_DIR" -name "trade_*.db.gz" -mtime +$RETENTION_DAYS -delete
+  find "$BACKUP_DIR" -name "trade_*.db.gz" -mtime +"$RETENTION_DAYS" -delete
   echo "[$(date -Iseconds)] Cleaned backups older than $RETENTION_DAYS days"
 else
-  echo "ERROR: Backup failed" >&2
+  echo "ERROR: Backup failed for $DB_PATH" >&2
+  rm -f "$BACKUP_FILE" 2>/dev/null || true
   exit 1
 fi
