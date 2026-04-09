@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { logger, Database, SignalBus, SimulationEngine } from '@trade/core';
+import { logger, Database, SignalBus, SimulationEngine, MCPConnectionPool } from '@trade/core';
+import type { AgentInfrastructure } from '@trade/core';
 import { AgentManager } from './agent-manager.js';
 
 // Import all agents
@@ -12,6 +13,8 @@ import { NewsEdgeAgent } from '@trade/agent-news-edge/agent.js';
 import { LiquidityHunterAgent } from '@trade/agent-liquidity-hunter/agent.js';
 import { PortfolioGuardAgent } from '@trade/agent-portfolio-guard/agent.js';
 
+const isSimulation = process.env.SIMULATION !== 'false';
+
 // Initialize infrastructure
 const db = new Database(process.env.DB_PATH || './data/trade.db');
 db.initialize();
@@ -19,7 +22,42 @@ db.initialize();
 const signalBus = new SignalBus(process.env.REDIS_URL || 'redis://localhost:6379');
 const simulation = new SimulationEngine();
 
-const infra = { db, signalBus, simulation };
+// Initialize MCP connection pool for real data
+let mcpPool: MCPConnectionPool | undefined;
+if (!isSimulation) {
+  mcpPool = new MCPConnectionPool();
+
+  mcpPool.register('coingecko', {
+    command: 'node',
+    args: ['packages/mcp-servers/coingecko/dist/index.js'],
+    env: { COINGECKO_API_KEY: process.env.COINGECKO_API_KEY || '' },
+  });
+
+  mcpPool.register('coinmarketcap', {
+    command: 'node',
+    args: ['packages/mcp-servers/coinmarketcap/dist/index.js'],
+    env: { CMC_API_KEY: process.env.CMC_API_KEY || '' },
+  });
+
+  mcpPool.register('helius', {
+    command: 'node',
+    args: ['packages/mcp-servers/helius/dist/index.js'],
+    env: { HELIUS_RPC_URL: process.env.HELIUS_RPC_URL || '' },
+  });
+
+  mcpPool.register('jupiter', {
+    command: 'node',
+    args: ['packages/mcp-servers/jupiter/dist/index.js'],
+  });
+
+  mcpPool.register('1inch', {
+    command: 'node',
+    args: ['packages/mcp-servers/1inch/dist/index.js'],
+    env: { ONEINCH_API_KEY: process.env.ONEINCH_API_KEY || '' },
+  });
+}
+
+const infra: AgentInfrastructure = { db, signalBus, simulation, mcpPool, isSimulation };
 
 const manager = new AgentManager();
 
@@ -78,6 +116,8 @@ manager.register('portfolio-guard', portfolioGuard);
 
 logger.info('Orchestrator initialized', {
   agents: manager.listAgents(),
+  mode: isSimulation ? 'simulation' : 'real-data',
+  mcpServers: mcpPool ? ['coingecko', 'coinmarketcap', 'helius', 'jupiter', '1inch'] : [],
   signalBus: 'connected',
   db: 'initialized',
 });
@@ -102,6 +142,7 @@ process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down...');
   manager.stopAll();
   signalBus.disconnect().catch(() => {});
+  if (mcpPool) mcpPool.disconnectAll().catch(() => {});
   db.close();
   process.exit(0);
 });
@@ -110,6 +151,7 @@ process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down...');
   manager.stopAll();
   signalBus.disconnect().catch(() => {});
+  if (mcpPool) mcpPool.disconnectAll().catch(() => {});
   db.close();
   process.exit(0);
 });
