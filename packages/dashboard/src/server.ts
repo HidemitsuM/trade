@@ -1,6 +1,12 @@
 import { createServer } from 'node:http';
 import { Database } from '@trade/core';
 
+const SECURITY_HEADERS = {
+  'Content-Security-Policy': "default-src 'self'; style-src 'unsafe-inline'",
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+};
+
 const PORT = Number(process.env.DASHBOARD_PORT) || 3000;
 
 const HTML = `<!DOCTYPE html>
@@ -55,9 +61,18 @@ const HTML = `<!DOCTYPE html>
         document.getElementById('total-trades').textContent = data.total_trades;
         document.getElementById('active-agents').textContent = data.active_agents + '/' + data.total_agents;
         const tbody = document.getElementById('trades-body');
-        tbody.innerHTML = data.trades.map(t =>
-          \`<tr><td>\${t.timestamp}</td><td>\${t.agent}</td><td>\${t.pair}</td><td>\${t.side}</td><td class="\${t.pnl >= 0 ? 'positive' : 'negative'}">$\${t.pnl?.toFixed(2) || '--'}</td><td>\${t.simulated ? 'Yes' : 'No'}</td></tr>\`
-        ).join('');
+        tbody.innerHTML = '';
+        for (const t of data.trades) {
+          const tr = document.createElement('tr');
+          const tdTs = document.createElement('td'); tdTs.textContent = t.timestamp;
+          const tdAg = document.createElement('td'); tdAg.textContent = t.agent;
+          const tdPr = document.createElement('td'); tdPr.textContent = t.pair;
+          const tdSd = document.createElement('td'); tdSd.textContent = t.side;
+          const tdPnl = document.createElement('td'); tdPnl.textContent = '$' + (t.pnl != null ? t.pnl.toFixed(2) : '--'); tdPnl.className = t.pnl >= 0 ? 'positive' : 'negative';
+          const tdSim = document.createElement('td'); tdSim.textContent = t.simulated ? 'Yes' : 'No';
+          tr.append(tdTs, tdAg, tdPr, tdSd, tdPnl, tdSim);
+          tbody.appendChild(tr);
+        }
       } catch (e) { console.error('Failed to refresh', e); }
     }
     refresh();
@@ -73,7 +88,7 @@ export function startDashboard(db: Database | null): void {
     const url = req.url ?? '/';
 
     if (url === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
       res.end(JSON.stringify({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -85,7 +100,7 @@ export function startDashboard(db: Database | null): void {
 
     if (url.startsWith('/api/')) {
       if (!db) {
-        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.writeHead(503, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
         res.end(JSON.stringify({ error: 'Database not initialized' }));
         return;
       }
@@ -106,14 +121,14 @@ export function startDashboard(db: Database | null): void {
         const closedTrades = trades.filter(t => t.pnl !== null);
         const totalPnl = closedTrades.reduce((s, t) => s + t.pnl!, 0);
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
 
         if (url === '/api/status') {
           res.end(JSON.stringify({
             total_pnl: totalPnl,
             win_rate: closedTrades.length > 0 ? (wonTrades.length / closedTrades.length) * 100 : 0,
             total_trades: trades.length,
-            active_agents: 8,
+            active_agents: trades.length > 0 ? new Set(trades.map((t: any) => t.agent)).size : 0,
             total_agents: 8,
             trades: trades,
           }));
@@ -129,22 +144,22 @@ export function startDashboard(db: Database | null): void {
           const agentNames = ['arb-scanner', 'pump-sniper', 'spread-farmer', 'copy-trader', 'liquidity-hunter', 'news-edge', 'whale-tracker', 'portfolio-guard'];
           const agents = agentNames.map(name => ({
             name,
-            status: 'running',
+            status: db.getTradesByAgent(name).length > 0 ? 'running' : 'idle',
             trade_count: db.getTradesByAgent(name).length,
             pnl: db.getAgentPnl(name),
           }));
           res.end(JSON.stringify({ agents, total_agents: agents.length, active_agents: agents.length }));
         } else {
-          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.writeHead(404, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
           res.end(JSON.stringify({ error: 'Not found' }));
         }
       } catch (err) {
         console.error('DB query failed:', err);
-        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.writeHead(503, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
         res.end(JSON.stringify({ error: 'Database query failed' }));
       }
     } else {
-      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.writeHead(200, { 'Content-Type': 'text/html', ...SECURITY_HEADERS });
       res.end(HTML);
     }
   });
